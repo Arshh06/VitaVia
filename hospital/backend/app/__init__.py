@@ -1,0 +1,1 @@
+"""VITAVIA FastAPI application package."""
