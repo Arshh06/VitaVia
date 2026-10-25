@@ -21,6 +21,7 @@ MOCK_ROUTE_DATA = {
     "HOSP002": {"distance_km": 8.0, "traffic_condition": "LOW", "eta_minutes": 10.0},
     "HOSP003": {"distance_km": 4.0, "traffic_condition": "LOW", "eta_minutes": 7.0},
     "HOSP004": {"distance_km": 5.0, "traffic_condition": "MODERATE", "eta_minutes": 11.0},
+    "HOSP005": {"distance_km": 7.2, "traffic_condition": "LOW", "eta_minutes": 12.0},
 }
 
 

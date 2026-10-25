@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VitaVia | Connected Ambulance Command Center</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root {
+            --bg-dark: #0b0f19;
+            --card-bg: #111827;
+            --card-sub: #1f2937;
+            --border-color: #374151;
+            --text-main: #f9fafb;
+            --text-muted: #9ca3af;
+            --accent-red: #ef4444;
+            --accent-orange: #f97316;
+            --accent-yellow: #f59e0b;
+            --accent-green: #10b981;
+            --accent-cyan: #38bdf8;
+            --accent-blue: #3b82f6;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Navigation Header */
+        header {
+            background: linear-gradient(180deg, #161e2e 0%, #111827 100%);
+            border-bottom: 1px solid var(--border-color);
+            padding: 14px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-title-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-title {
+            font-size: 1.45rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(90deg, #ef4444, #f97316, #38bdf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-subtitle {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .header-badges {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #10b981;
+            animation: pulse 1.8s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .nav-link-btn {
+            background: var(--card-sub);
+            color: var(--accent-cyan);
+            border: 1px solid var(--border-color);
+            padding: 6px 14px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .nav-link-btn:hover {
+            background: #2d3748;
+            border-color: var(--accent-cyan);
+        }
+
+        /* Layout Grid */
+        .main-container {
+            flex: 1;
+            padding: 20px 24px;
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 1080px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Left Column: Form & Telemetry */
+        .panel {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 18px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+        }
+
+        .panel-header {
+            font-size: 1.05rem;
+            font-weight: 750;
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .form-control {
+            width: 100%;
+            background: var(--card-sub);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-control:focus {
+            border-color: var(--accent-cyan);
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            width: 100%;
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 800;
+            font-size: 0.95rem;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(239, 68, 68, 0.4);
+            transition: all 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn-primary:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+
+        /* Telemetry Cards */
+        .telemetry-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .tele-card {
+            background: var(--card-sub);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 10px 12px;
+            text-align: center;
+        }
+
+        .tele-val {
+            font-size: 1.45rem;
+            font-weight: 850;
+            color: var(--text-main);
+            margin: 2px 0;
+        }
+
+        .tele-lbl {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        .tele-status {
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-top: 2px;
+        }
+
+        .status-danger { color: #f87171; }
+        .status-warning { color: #fbbf24; }
+        .status-ok { color: #4ade80; }
+
+        /* Progress Bar */
+        .progress-container {
+            background: var(--card-sub);
+            border-radius: 9999px;
+            height: 12px;
+            width: 100%;
+            overflow: hidden;
+            margin: 10px 0;
+            border: 1px solid var(--border-color);
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #38bdf8, #10b981);
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+
+        /* Simulation Buttons */
+        .sim-btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .btn-secondary {
+            background: var(--card-sub);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: #2d3748;
+            border-color: var(--accent-cyan);
+        }
+
+        /* Right Column: AI Insights, Matrix, Map */
+        .ai-banner {
+            background: linear-gradient(135deg, #172554 0%, #0f172a 100%);
+            border-left: 5px solid var(--accent-cyan);
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            border-top: 1px solid var(--border-color);
+            border-right: 1px solid var(--border-color);
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .ai-banner-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .badge-urgency {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 800;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+        }
+
+        .badge-critical { background: #7f1d1d; color: #fecaca; border: 1px solid #ef4444; }
+        .badge-high { background: #7c2d12; color: #fed7aa; border: 1px solid #f97316; }
+        .badge-moderate { background: #713f12; color: #fef08a; border: 1px solid #f59e0b; }
+        .badge-low { background: #14532d; color: #bbf7d0; border: 1px solid #10b981; }
+
+        .tag-pill {
+            display: inline-block;
+            background: #1e293b;
+            color: #e2e8f0;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            padding: 3px 8px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            margin-right: 4px;
+        }
+
+        /* Hospital Matrix Cards */
+        .hospital-matrix {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .hosp-card {
+            background: var(--card-bg);
+            border: 1.5px solid var(--border-color);
+            border-radius: 10px;
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 190px;
+            transition: all 0.2s;
+        }
+
+        .hosp-card.winner {
+            border: 2px solid #22c55e;
+            background: #064e3b22;
+            box-shadow: 0 0 14px rgba(34, 197, 94, 0.25);
+        }
+
+        .hosp-title {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 4px;
+        }
+
+        .hosp-eta {
+            font-size: 1.35rem;
+            font-weight: 850;
+            color: var(--accent-cyan);
+            margin: 4px 0;
+        }
+
+        .hosp-traffic {
+            font-size: 0.72rem;
+            font-weight: 750;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .traffic-low { background: #14532d; color: #86efac; }
+        .traffic-moderate { background: #713f12; color: #fef08a; }
+        .traffic-heavy { background: #7f1d1d; color: #fca5a5; }
+
+        /* Handshake Box */
+        .ack-container {
+            background: linear-gradient(135deg, #064e3b 0%, #022c22 100%);
+            border: 1.5px solid #059669;
+            border-radius: 10px;
+            padding: 16px 18px;
+            margin-bottom: 20px;
+        }
+
+        /* Map */
+        #map {
+            width: 100%;
+            height: 380px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title-group">
+            <span style="font-size: 1.8rem;">🚑</span>
+            <div>
+                <div class="header-title">VITAVIA | Mission Control Command Center</div>
+                <div class="header-subtitle">AI-Assisted Connected Ambulance & Traffic-Aware Hospital Routing System (Spring Boot Java)</div>
+            </div>
+        </div>
+        <div class="header-badges">
+            <div id="sse-indicator" class="live-indicator">
+                <span class="live-dot"></span>
+                <span id="sse-text">LIVE SSE STREAMING</span>
+            </div>
+            <a href="/hospital" class="nav-link-btn" target="_blank">
+                🏥 Hospital Control Room ↗
+            </a>
+        </div>
+    </header>
+
+    <div class="main-container">
+
+        <!-- LEFT COLUMN: Mission Intake & Simulation Controls -->
+        <div>
+            <!-- Intake Card -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span>📋 Patient Emergency Intake</span>
+                    <span id="mission-status-badge" class="badge-urgency badge-high">STANDBY</span>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Preset Demonstration Scenario</label>
+                    <select id="scenario-selector" class="form-control" onchange="loadScenario(this.value)">
+                        <option value="1. Acute Respiratory Distress & Hypoxia (Critical)">1. Acute Respiratory Distress & Hypoxia (Critical - ICU+Vent)</option>
+                        <option value="2. Acute Coronary Syndrome / Cardiogenic Stress (High)">2. Acute Coronary Syndrome (High - ICU)</option>
+                        <option value="3. Moderate Trauma / Extremity Injury (Moderate)">3. Moderate Trauma (Moderate - Standard Bed)</option>
+                        <option value="4. Severe Sepsis / High Grade Pyrexia (Critical)">4. Severe Sepsis (Critical - ICU+Bed)</option>
+                    </select>
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Patient Name</label>
+                        <input id="p-name" type="text" class="form-control" value="Sarah Jenkins">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Age / Gender</label>
+                        <div class="grid-2">
+                            <input id="p-age" type="number" class="form-control" value="58">
+                            <select id="p-gender" class="form-control">
+                                <option value="Female">Female</option>
+                                <option value="Male">Male</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Chief Complaint</label>
+                    <input id="p-complaint" type="text" class="form-control" value="Severe dyspnea, acute cyanosis, respiratory failure">
+                </div>
+
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Blood Group / History</label>
+                        <input id="p-blood" type="text" class="form-control" value="A+ (COPD, HTN)">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Ambulance ID</label>
+                        <input id="amb-id" type="text" class="form-control" value="AMB-07" readonly>
+                    </div>
+                </div>
+
+                <!-- Vital Inputs -->
+                <div class="form-label" style="margin-top: 8px;">Live Telemetry Sensor Inputs</div>
+                <div class="grid-3">
+                    <div class="form-group">
+                        <label class="form-label">SpO2 (%)</label>
+                        <input id="v-spo2" type="number" step="0.1" class="form-control" value="87.5">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Heart Rate</label>
+                        <input id="v-hr" type="number" class="form-control" value="128">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Temp (°C)</label>
+                        <input id="v-temp" type="number" step="0.1" class="form-control" value="38.4">
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label class="form-label">Blood Pressure (mmHg)</label>
+                        <div class="grid-2">
+                            <input id="v-sbp" type="number" class="form-control" value="92" placeholder="Sys">
+                            <input id="v-dbp" type="number" class="form-control" value="58" placeholder="Dia">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Dispatch Origin</label>
+                        <input id="p-origin" type="text" class="form-control" value="Trinity Junction Central">
+                    </div>
+                </div>
+
+                <button id="dispatch-btn" class="btn-primary" onclick="dispatchMission()">
+                    🚨 EVALUATE &amp; DISPATCH FASTEST HOSPITAL
+                </button>
+            </div>
+
+            <!-- Live Transit Simulation Controls -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span>📡 Live IoT Telemetry &amp; Transit Control</span>
+                    <span id="transit-eta-badge" style="color: var(--accent-cyan); font-weight: 800;">ETA: —</span>
+                </div>
+
+                <div class="telemetry-grid">
+                    <div class="tele-card">
+                        <div class="tele-lbl">SpO2</div>
+                        <div id="live-spo2" class="tele-val">87.5%</div>
+                        <div id="live-spo2-status" class="tele-status status-danger">CRITICAL</div>
+                    </div>
+                    <div class="tele-card">
+                        <div class="tele-lbl">Heart Rate</div>
+                        <div id="live-hr" class="tele-val">128</div>
+                        <div id="live-hr-status" class="tele-status status-danger">Tachycardia</div>
+                    </div>
+                    <div class="tele-card">
+                        <div class="tele-lbl">BP (NIBP)</div>
+                        <div id="live-bp" class="tele-val">92/58</div>
+                        <div id="live-bp-status" class="tele-status status-danger">Hypotension</div>
+                    </div>
+                    <div class="tele-card">
+                        <div class="tele-lbl">Temp</div>
+                        <div id="live-temp" class="tele-val">38.4°C</div>
+                        <div id="live-temp-status" class="tele-status status-warning">Pyrexia</div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700; color: var(--text-muted);">
+                    <span>Route Transit Progress</span>
+                    <span id="progress-pct-text">0%</span>
+                </div>
+                <div class="progress-container">
+                    <div id="progress-bar" class="progress-bar"></div>
+                </div>
+                <div id="transit-location-text" style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 8px;">
+                    Position: Trinity Junction Central
+                </div>
+
+                <div class="sim-btn-group">
+                    <button id="step-btn" class="btn-secondary" onclick="stepSimulation(0.10)">
+                        ⏭ Advance +10%
+                    </button>
+                    <button id="stream-btn" class="btn-secondary" onclick="toggleAutoStream()">
+                        ▶ Auto Stream
+                    </button>
+                    <button class="btn-secondary" onclick="fluctuateVitals()">
+                        🔄 Fluctuate Vitals
+                    </button>
+                    <button class="btn-secondary" onclick="resetMission()">
+                        ⏮ Reset Mission
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: AI Analysis, Hospital Matrix, GIS Map -->
+        <div>
+            <!-- AI Clinical Assessment Banner -->
+            <div id="ai-banner" class="ai-banner">
+                <div class="ai-banner-header">
+                    <div style="font-size: 1.1rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                        🧠 Gemini Clinical Decision-Support
+                    </div>
+                    <span id="ai-urgency-badge" class="badge-urgency badge-critical">CRITICAL</span>
+                </div>
+                <div id="ai-summary" style="font-size: 0.95rem; margin-bottom: 10px; line-height: 1.4;">
+                    Severe respiratory instability (SpO2 87.5%, HR 128 bpm, BP 92/58). Immediate ICU &amp; ventilator support mandatory.
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 8px;">
+                    <div>
+                        <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-right: 6px;">Mandatory:</span>
+                        <span id="ai-infra-tags">
+                            <span class="tag-pill">Emergency Bed</span>
+                            <span class="tag-pill">Emergency Doctor</span>
+                            <span class="tag-pill">ICU</span>
+                            <span class="tag-pill">Ventilator</span>
+                        </span>
+                    </div>
+                    <span id="ai-source" style="font-size: 0.75rem; color: var(--text-muted); font-style: italic;">
+                        [Source: HEURISTIC_FALLBACK]
+                    </span>
+                </div>
+            </div>
+
+            <!-- Hospital Handshake Box (Updated in real-time when hospital acknowledges) -->
+            <div id="handshake-box" class="ack-container" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <div style="font-weight: 800; font-size: 1rem; color: #6ee7b7; display: flex; align-items: center; gap: 8px;">
+                        🤝 Hospital Handshake &amp; Trauma Bay Reservation
+                    </div>
+                    <span id="ack-id-badge" style="background: #047857; color: white; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 0.75rem;">
+                        ACK-PENDING
+                    </span>
+                </div>
+                <div style="font-size: 0.92rem; margin-bottom: 4px;">
+                    <strong>Destination Facility:</strong> <span id="ack-hospital-name">—</span>
+                </div>
+                <div style="font-size: 0.92rem; margin-bottom: 4px;">
+                    <strong>Assigned Trauma Bay:</strong> <span id="ack-bay" style="background: #047857; padding: 2px 8px; border-radius: 4px; font-weight: 700;">Trauma Bay #1</span>
+                </div>
+                <div style="font-size: 0.92rem; margin-bottom: 6px;">
+                    <strong>Hospital Team Status:</strong> <span id="ack-team-ready" style="color: #6ee7b7; font-weight: 700;">STANDBY</span>
+                </div>
+                <div id="ack-message" style="font-size: 0.85rem; font-style: italic; color: #a7f3d0; border-top: 1px solid #047857; padding-top: 6px; margin-top: 6px;">
+                    "Hospital alerted and resources reserved."
+                </div>
+            </div>
+
+            <!-- Multi-Hospital Suitability & Traffic Matrix -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span>🏥 Multi-Hospital Suitability &amp; Traffic Optimization Matrix</span>
+                    <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 500;">Checks Mandatory Infrastructure &rarr; Optimizes for Lowest ETA</span>
+                </div>
+                <div id="hospital-matrix" class="hospital-matrix">
+                    <!-- Populated dynamically via JS -->
+                </div>
+            </div>
+
+            <!-- GIS Route & Live Movement Map -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span>🗺️ Live Geographic Emergency Route Map</span>
+                    <span id="map-status" style="font-size: 0.78rem; color: var(--accent-cyan); font-weight: 700;">Ambulance Active</span>
+                </div>
+                <div id="map"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Leaflet GIS JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        const API_BASE = "";
+        let autoStreamInterval = null;
+        let map, ambulanceMarker, hospitalMarkers = {}, routePolyline;
+        let currentEmergencyId = null;
+
+        const defaultOrigin = [12.9700, 77.6000];
+
+        // Initialize Map
+        function initMap() {
+            map = L.map('map').setView(defaultOrigin, 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(map);
+
+            const ambulanceIcon = L.divIcon({
+                className: 'custom-amb-icon',
+                html: '<div style="font-size: 26px; filter: drop-shadow(0 0 6px rgba(239,68,68,0.8));">🚑</div>',
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+
+            ambulanceMarker = L.marker(defaultOrigin, { icon: ambulanceIcon }).addTo(map)
+                .bindPopup("<b>Ambulance AMB-07</b><br>Origin: Trinity Junction Central");
+        }
+
+        // Connect Server-Sent Events (SSE)
+        function initSSE() {
+            const sseText = document.getElementById("sse-text");
+            const eventSource = new EventSource("/api/v1/events/stream");
+
+            eventSource.addEventListener("open", () => {
+                sseText.innerText = "LIVE SSE CONNECTED";
+                document.getElementById("sse-indicator").style.background = "rgba(16, 185, 129, 0.15)";
+            });
+
+            eventSource.addEventListener("EMERGENCY_DISPATCHED", (e) => {
+                const data = JSON.parse(e.data);
+                console.log("SSE: Emergency Dispatched", data);
+                updateLiveView(data);
+            });
+
+            eventSource.addEventListener("TELEMETRY_UPDATED", (e) => {
+                const data = JSON.parse(e.data);
+                handleTelemetryEvent(data);
+            });
+
+            eventSource.addEventListener("HOSPITAL_ACKNOWLEDGED", (e) => {
+                const data = JSON.parse(e.data);
+                console.log("SSE: Hospital Acknowledged", data);
+                handleHospitalAcknowledgment(data);
+            });
+
+            eventSource.addEventListener("PATIENT_RECEIVED", (e) => {
+                const data = JSON.parse(e.data);
+                console.log("SSE: Patient Received", data);
+                document.getElementById("mission-status-badge").innerText = "COMPLETED";
+                document.getElementById("mission-status-badge").className = "badge-urgency badge-low";
+                alert("Hospital Confirmed: Patient Safely Received & Admitted!");
+            });
+
+            eventSource.addEventListener("EMERGENCY_REROUTED", (e) => {
+                const data = JSON.parse(e.data);
+                console.log("SSE: Emergency Rerouted", data);
+                document.getElementById("mission-status-badge").innerText = "REROUTED";
+                document.getElementById("mission-status-badge").className = "badge-urgency badge-moderate";
+                if (document.getElementById("rec-hosp-name")) {
+                    document.getElementById("rec-hosp-name").innerText = data.newHospitalName;
+                }
+                if (document.getElementById("rec-eta-pill")) {
+                    document.getElementById("rec-eta-pill").innerText = "ETA: " + Number(data.newEtaMinutes).toFixed(1) + " min";
+                }
+                alert("⚠️ ALERT: Inbound facility diverted ambulance! Dynamic Reroute engaged to: " + data.newHospitalName);
+            });
+
+            eventSource.onerror = () => {
+                sseText.innerText = "RECONNECTING SSE...";
+                document.getElementById("sse-indicator").style.background = "rgba(245, 158, 11, 0.15)";
+            };
+        }
+
+        function handleTelemetryEvent(data) {
+            document.getElementById("live-spo2").innerText = data.vitals.spo2.toFixed(1) + "%";
+            document.getElementById("live-hr").innerText = data.vitals.heartRate;
+            document.getElementById("live-bp").innerText = data.vitals.systolicBp + "/" + data.vitals.diastolicBp;
+            document.getElementById("live-temp").innerText = data.vitals.temperature.toFixed(1) + "°C";
+
+            const progressPct = data.progressPercent || 0;
+            document.getElementById("progress-bar").style.width = progressPct + "%";
+            document.getElementById("progress-pct-text").innerText = progressPct + "%";
+            document.getElementById("transit-location-text").innerText = "Position: " + data.address;
+            document.getElementById("transit-eta-badge").innerText = "ETA: " + data.remainingEtaMinutes.toFixed(1) + " min";
+            document.getElementById("mission-status-badge").innerText = data.status;
+
+            if (ambulanceMarker && data.latitude && data.longitude) {
+                ambulanceMarker.setLatLng([data.latitude, data.longitude]);
+                ambulanceMarker.setPopupContent(`<b>Ambulance AMB-07</b><br>Status: ${data.status}<br>${data.address}`);
+            }
+
+            if (data.status === "ARRIVED") {
+                document.getElementById("mission-status-badge").className = "badge-urgency badge-low";
+                if (autoStreamInterval) {
+                    toggleAutoStream();
+                }
+            }
+        }
+
+        function handleHospitalAcknowledgment(data) {
+            const box = document.getElementById("handshake-box");
+            box.style.display = "block";
+            document.getElementById("ack-id-badge").innerText = "ACK-ACCEPTED";
+            document.getElementById("ack-id-badge").style.background = "#10b981";
+            document.getElementById("ack-hospital-name").innerText = data.hospitalName || "Hospital Control Room";
+            document.getElementById("ack-bay").innerText = data.assignedBay || "Assigned Trauma Bay";
+            document.getElementById("ack-team-ready").innerText = data.teamReady ? "TEAM READY ON STANDBY ✅" : "ALERTED";
+            document.getElementById("ack-team-ready").style.color = "#34d399";
+            document.getElementById("ack-message").innerText = `"${data.notes || 'Hospital staff confirmed trauma team ready.'}"`;
+            document.getElementById("mission-status-badge").innerText = "ACKNOWLEDGED BY HOSPITAL";
+            document.getElementById("mission-status-badge").className = "badge-urgency badge-low";
+        }
+
+        // Load Preset Scenario
+        async function loadScenario(key) {
+            try {
+                const res = await fetch("/api/v1/simulation/scenarios");
+                const scenarios = await res.json();
+                const sc = scenarios[key];
+                if (sc) {
+                    document.getElementById("p-name").value = sc.patient.name;
+                    document.getElementById("p-age").value = sc.patient.age;
+                    document.getElementById("p-gender").value = sc.patient.gender;
+                    document.getElementById("p-complaint").value = sc.patient.chief_complaint;
+                    document.getElementById("v-spo2").value = sc.vitals.spo2;
+                    document.getElementById("v-hr").value = sc.vitals.heart_rate;
+                    document.getElementById("v-temp").value = sc.vitals.temperature;
+                    document.getElementById("v-sbp").value = sc.vitals.systolic_bp;
+                    document.getElementById("v-dbp").value = sc.vitals.diastolic_bp;
+                }
+            } catch (e) {
+                console.error("Failed to load scenario", e);
+            }
+        }
+
+        // Dispatch Mission Workflow
+        async function dispatchMission() {
+            const payload = {
+                ambulance_id: document.getElementById("amb-id").value,
+                patient_info: {
+                    patient_id: "PAT-" + Math.floor(1000 + Math.random() * 9000),
+                    name: document.getElementById("p-name").value,
+                    age: parseInt(document.getElementById("p-age").value),
+                    gender: document.getElementById("p-gender").value,
+                    chief_complaint: document.getElementById("p-complaint").value,
+                    blood_group: document.getElementById("p-blood").value
+                },
+                vitals: {
+                    spo2: parseFloat(document.getElementById("v-spo2").value),
+                    heart_rate: parseInt(document.getElementById("v-hr").value),
+                    systolic_bp: parseInt(document.getElementById("v-sbp").value),
+                    diastolic_bp: parseInt(document.getElementById("v-dbp").value),
+                    temperature: parseFloat(document.getElementById("v-temp").value)
+                },
+                location: {
+                    latitude: defaultOrigin[0],
+                    longitude: defaultOrigin[1],
+                    address: document.getElementById("p-origin").value
+                }
+            };
+
+            const btn = document.getElementById("dispatch-btn");
+            btn.innerText = "⏳ ANALYZING & ROUTING...";
+            btn.disabled = true;
+
+            try {
+                const res = await fetch("/api/v1/dispatch", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                console.log("Dispatch Response:", data);
+
+                currentEmergencyId = data.mission.emergency_id;
+                renderSelectionResults(data);
+                document.getElementById("mission-status-badge").innerText = "DISPATCHED";
+                document.getElementById("mission-status-badge").className = "badge-urgency badge-high";
+            } catch (e) {
+                alert("Dispatch failed: " + e.message);
+            } finally {
+                btn.innerText = "🚨 EVALUATE & DISPATCH FASTEST HOSPITAL";
+                btn.disabled = false;
+            }
+        }
+
+        function renderSelectionResults(data) {
+            const gemini = data.selection.gemini_analysis;
+            const selectedHosp = data.selection.selected_hospital;
+            const selectedRoute = data.selection.selected_route;
+            const evaluations = data.selection.all_evaluations;
+            const ack = data.acknowledgment;
+
+            // 1. AI Banner
+            document.getElementById("ai-urgency-badge").innerText = gemini.urgency;
+            document.getElementById("ai-urgency-badge").className = `badge-urgency badge-${gemini.urgency.toLowerCase()}`;
+            document.getElementById("ai-summary").innerText = gemini.summary;
+            document.getElementById("ai-source").innerText = `[Source: ${gemini.source}]`;
+
+            const tagContainer = document.getElementById("ai-infra-tags");
+            tagContainer.innerHTML = gemini.required_infrastructure
+                .map(inf => `<span class="tag-pill">🏥 ${inf}</span>`).join("");
+
+            // 2. Handshake Box
+            if (ack) {
+                document.getElementById("handshake-box").style.display = "block";
+                document.getElementById("ack-id-badge").innerText = ack.acknowledgmentId;
+                document.getElementById("ack-hospital-name").innerText = ack.hospitalName;
+                document.getElementById("ack-bay").innerText = ack.assignedBay;
+                document.getElementById("ack-team-ready").innerText = ack.teamReady ? "TEAM ON STANDBY" : "ALERTED";
+                document.getElementById("ack-message").innerText = `"${ack.message}"`;
+            }
+
+            // 3. Hospital Matrix
+            const matrix = document.getElementById("hospital-matrix");
+            matrix.innerHTML = evaluations.map(ev => {
+                const isWinner = (selectedHosp && ev.hospitalId === selectedHosp.id);
+                const trafficClass = ev.trafficCondition.toLowerCase();
+                const infraBadge = ev.infrastructureEligible
+                    ? `<span style="color: #4ade80; font-weight: 700; font-size: 0.75rem;">✅ Eligible</span>`
+                    : `<span style="color: #f87171; font-weight: 700; font-size: 0.75rem;">❌ Lacks: ${ev.missingInfrastructure.join(", ")}</span>`;
+
+                const winnerBadge = isWinner
+                    ? `<div style="background: #16a34a; color: white; padding: 4px; border-radius: 4px; font-weight: 800; font-size: 0.75rem; text-align: center; margin-top: 6px;">🏆 FASTEST SUITABLE</div>`
+                    : (ev.infrastructureEligible
+                        ? `<div style="background: #1e3a8a; color: #bfdbfe; padding: 4px; border-radius: 4px; font-weight: 700; font-size: 0.72rem; text-align: center; margin-top: 6px;">Eligible (Slower)</div>`
+                        : `<div style="background: #3f1d1d; color: #fca5a5; padding: 4px; border-radius: 4px; font-weight: 700; font-size: 0.72rem; text-align: center; margin-top: 6px;">Rejected (Incapable)</div>`);
+
+                return `
+                    <div class="hosp-card ${isWinner ? 'winner' : ''}">
+                        <div>
+                            <div class="hosp-title">${ev.hospitalName}</div>
+                            <div style="font-size: 0.72rem; color: var(--text-muted); margin-bottom: 4px;">ID: ${ev.hospitalId}</div>
+                            <span class="hosp-traffic traffic-${trafficClass}">Traffic: ${ev.trafficCondition}</span>
+                            <div class="hosp-eta">⏱️ ${ev.etaMinutes} min</div>
+                            <div style="font-size: 0.8rem; color: var(--text-muted);">📍 ${ev.distanceKm} km</div>
+                        </div>
+                        <div>
+                            ${infraBadge}
+                            ${winnerBadge}
+                        </div>
+                    </div>
+                `;
+            }).join("");
+
+            // 4. Update Map Route
+            if (selectedHosp && selectedHosp.location) {
+                const destCoords = [selectedHosp.location.latitude, selectedHosp.location.longitude];
+                if (routePolyline) map.removeLayer(routePolyline);
+
+                routePolyline = L.polyline([defaultOrigin, destCoords], {
+                    color: '#38bdf8',
+                    weight: 5,
+                    dashArray: '8, 8'
+                }).addTo(map);
+
+                map.fitBounds(routePolyline.getBounds(), { padding: [40, 40] });
+            }
+        }
+
+        // Step simulation (+10%)
+        async function stepSimulation(stepFraction) {
+            try {
+                const res = await fetch("/api/v1/simulation/step", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ stepFraction: stepFraction, trend: "fluctuate" })
+                });
+                const data = await res.json();
+                console.log("Step Result:", data);
+            } catch (e) {
+                console.error("Step error", e);
+            }
+        }
+
+        // Fluctuate Vitals
+        async function fluctuateVitals() {
+            try {
+                await fetch("/api/v1/simulation/vitals", { method: "POST" });
+            } catch (e) {
+                console.error("Vitals fluctuation error", e);
+            }
+        }
+
+        // Toggle Auto Stream
+        function toggleAutoStream() {
+            const btn = document.getElementById("stream-btn");
+            if (autoStreamInterval) {
+                clearInterval(autoStreamInterval);
+                autoStreamInterval = null;
+                btn.innerText = "▶ Auto Stream";
+                btn.style.background = "";
+            } else {
+                autoStreamInterval = setInterval(() => stepSimulation(0.10), 1800);
+                btn.innerText = "⏹ Stop Stream";
+                btn.style.background = "#dc2626";
+            }
+        }
+
+        // Reset Mission
+        async function resetMission() {
+            if (autoStreamInterval) toggleAutoStream();
+            await fetch("/api/v1/simulation/reset", { method: "POST" });
+            document.getElementById("handshake-box").style.display = "none";
+            document.getElementById("progress-bar").style.width = "0%";
+            document.getElementById("progress-pct-text").innerText = "0%";
+            document.getElementById("mission-status-badge").innerText = "STANDBY";
+            document.getElementById("mission-status-badge").className = "badge-urgency badge-high";
+            ambulanceMarker.setLatLng(defaultOrigin);
+            map.setView(defaultOrigin, 13);
+            if (routePolyline) map.removeLayer(routePolyline);
+        }
+
+        // Load initial state
+        window.addEventListener("DOMContentLoaded", () => {
+            initMap();
+            initSSE();
+            // Fetch hospitals to show matrix initially
+            fetch("/api/v1/hospitals")
+                .then(r => r.json())
+                .then(hospitals => {
+                    hospitals.forEach(h => {
+                        const hIcon = L.divIcon({
+                            className: 'custom-hosp-icon',
+                            html: '<div style="font-size: 22px;">🏥</div>',
+                            iconSize: [26, 26]
+                        });
+                        hospitalMarkers[h.id] = L.marker([h.location.latitude, h.location.longitude], { icon: hIcon })
+                            .addTo(map)
+                            .bindPopup(`<b>${h.name}</b><br>${h.trauma_level}<br>Available ICU: ${h.infrastructure.available_icu_beds}`);
+                    });
+                });
+        });
+    </script>
+</body>
+</html>

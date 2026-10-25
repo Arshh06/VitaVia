@@ -38,3 +38,15 @@ wheels/
 # OS
 .DS_Store
 Thumbs.db
+
+# Java & Maven
+target/
+*.class
+.mvn/wrapper/maven-wrapper.jar
+
+# Embedded H2 Database
+data/
+*.mv.db
+*.trace.db
+
+hospital/backend/vitavia.db

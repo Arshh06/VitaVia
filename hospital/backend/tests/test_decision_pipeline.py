@@ -86,7 +86,7 @@ def test_decision_endpoint_returns_complete_default_response() -> None:
     assert payload["ambulance"]["ambulance_id"] == "AMB001"
     assert payload["patient"]["patient_id"] == "PAT001"
     assert payload["triage"]["severity"] == "HIGH"
-    assert len(payload["hospitals"]) == 4
+    assert len(payload["hospitals"]) == 5
     assert payload["selected_hospital"]["hospital_id"] == "HOSP002"
     assert payload["acknowledgement"]["status"] == "ACCEPTED"
 

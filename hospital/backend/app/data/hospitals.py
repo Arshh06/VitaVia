@@ -6,7 +6,7 @@ from app.models.schemas import GPSLocation, Hospital, HospitalAvailability
 _HOSPITALS = (
     Hospital(
         hospital_id="HOSP001",
-        name="VitaCare Medical Centre",
+        name="Metro City Central Hospital",
         location=GPSLocation(latitude=12.9780, longitude=77.6010),
         availability=HospitalAvailability(
             emergency_bed=True,
@@ -17,7 +17,7 @@ _HOSPITALS = (
     ),
     Hospital(
         hospital_id="HOSP002",
-        name="Metro Emergency Institute",
+        name="St. Jude Super Specialty Hospital",
         location=GPSLocation(latitude=12.9648, longitude=77.6052),
         availability=HospitalAvailability(
             emergency_bed=True,
@@ -28,7 +28,7 @@ _HOSPITALS = (
     ),
     Hospital(
         hospital_id="HOSP003",
-        name="GreenCross Trauma Centre",
+        name="Apex Community Medical Center",
         location=GPSLocation(latitude=12.9745, longitude=77.5830),
         availability=HospitalAvailability(
             emergency_bed=True,
@@ -39,10 +39,21 @@ _HOSPITALS = (
     ),
     Hospital(
         hospital_id="HOSP004",
-        name="Sunrise Critical Care",
+        name="Lifeline Memorial Health",
         location=GPSLocation(latitude=12.9592, longitude=77.5895),
         availability=HospitalAvailability(
             emergency_bed=False,
+            icu=True,
+            ventilator=True,
+            emergency_team=True,
+        ),
+    ),
+    Hospital(
+        hospital_id="HOSP005",
+        name="Grace Emergency & Trauma Institute",
+        location=GPSLocation(latitude=13.0250, longitude=77.5650),
+        availability=HospitalAvailability(
+            emergency_bed=True,
             icu=True,
             ventilator=True,
             emergency_team=True,

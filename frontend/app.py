@@ -8,6 +8,7 @@ traffic-aware fastest hospital routing, and live IoT ambulance simulation.
 import streamlit as st
 import requests
 import json
+import os
 import time
 import folium
 from streamlit_folium import st_folium
@@ -149,7 +150,9 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-BACKEND_URL = "http://127.0.0.1:8000"
+BACKEND_URL = os.getenv("VITAVIA_API_URL", "http://127.0.0.1:8000")
+HOSPITAL_BACKEND_URL = os.getenv("VITAVIA_HOSPITAL_API_URL", "http://127.0.0.1:8001")
+HOSPITAL_ID_MAP = {"HOSP-A": "HOSP001", "HOSP-B": "HOSP002", "HOSP-C": "HOSP003", "HOSP-D": "HOSP004", "HOSP-E": "HOSP005"}
 
 # State initialization
 if "simulator" not in st.session_state:
@@ -445,6 +448,54 @@ if not st.session_state.dispatch_data:
                         selected = data["selection"]["selected_hospital"]
                         route = data["selection"]["selected_route"]
                         ack = data["acknowledgment"]
+
+                        # Send the complete dispatch packet to the selected hospital control room.
+                        hospital_request = {
+                            "ambulance_id": sim.ambulance_id,
+                            "patient_id": p_info.patient_id,
+                            "patient_name": p_info.name,
+                            "age": p_info.age,
+                            "gender": p_info.gender,
+                            "chief_complaint": p_info.chief_complaint,
+                            "spo2": p_vitals.spo2,
+                            "heart_rate": p_vitals.heart_rate,
+                            "systolic_bp": p_vitals.systolic_bp,
+                            "diastolic_bp": p_vitals.diastolic_bp,
+                            "temperature": p_vitals.temperature,
+                            "dispatch_origin": p_location.address or "Ambulance dispatch origin",
+                            "ambulance_latitude": p_location.latitude,
+                            "ambulance_longitude": p_location.longitude,
+                            "selected_hospital_id": HOSPITAL_ID_MAP.get(selected["id"], selected["id"]),
+                            "selected_hospital_name": selected["name"],
+                            "eta_minutes": route["eta_minutes"],
+                            "distance_km": route["distance_km"],
+                            "triage_level": data["selection"]["gemini_analysis"]["urgency"],
+                            "triage_summary": data["selection"]["gemini_analysis"]["summary"],
+                            "required_infrastructure": data["selection"]["gemini_analysis"].get("required_infrastructure", []),
+                            "priority_code": {"CRITICAL": "P1", "HIGH": "P2", "MODERATE": "P3", "LOW": "P4"}.get(
+                                data["selection"]["gemini_analysis"]["urgency"], "P3"
+                            ),
+                            "acknowledgment_id": ack["acknowledgment_id"],
+                            "acknowledgment_status": "ACCEPTED" if ack["acknowledged"] else "PENDING",
+                            "assigned_bay": ack["assigned_bay"],
+                            "team_ready": ack["team_ready"],
+                        }
+                        try:
+                            hospital_res = requests.post(
+                                f"{HOSPITAL_BACKEND_URL}/emergency/incoming",
+                                json=hospital_request,
+                                timeout=3,
+                            )
+                            if hospital_res.status_code != 200:
+                                st.warning(
+                                    f"Ambulance dispatch succeeded, but the hospital notification was not accepted "
+                                    f"({hospital_res.status_code}). Start the hospital backend on port 8001."
+                                )
+                        except requests.RequestException:
+                            st.warning(
+                                "Ambulance dispatch succeeded, but the hospital control room could not be reached. "
+                                "Start the hospital backend on port 8001 to receive the emergency alert."
+                            )
 
                         sim.set_destination(
                             hospital_id=selected["id"],

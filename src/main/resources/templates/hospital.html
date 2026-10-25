@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VitaVia | Hospital Emergency Department Control Room</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        :root {
+            --bg-dark: #0b0f19;
+            --card-bg: #111827;
+            --card-sub: #1f2937;
+            --border-color: #374151;
+            --text-main: #f9fafb;
+            --text-muted: #9ca3af;
+            --accent-red: #ef4444;
+            --accent-orange: #f97316;
+            --accent-yellow: #f59e0b;
+            --accent-green: #10b981;
+            --accent-cyan: #38bdf8;
+            --accent-purple: #a855f7;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: linear-gradient(180deg, #1e1b4b 0%, #111827 100%);
+            border-bottom: 1px solid var(--border-color);
+            padding: 14px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-title-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-title {
+            font-size: 1.45rem;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(90deg, #38bdf8, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-subtitle {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .header-badges {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            background: rgba(16, 185, 129, 0.15);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #10b981;
+            animation: pulse 1.8s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .nav-link-btn {
+            background: var(--card-sub);
+            color: var(--accent-cyan);
+            border: 1px solid var(--border-color);
+            padding: 6px 14px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .nav-link-btn:hover {
+            background: #2d3748;
+            border-color: var(--accent-cyan);
+        }
+
+        /* Hospital Selector Banner */
+        .selector-strip {
+            background: #111827;
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .selector-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .form-select {
+            background: var(--card-sub);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            outline: none;
+            min-width: 320px;
+        }
+
+        .hospital-metric-pill {
+            background: var(--card-sub);
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            display: flex;
+            gap: 6px;
+        }
+
+        /* Main Container */
+        .main-container {
+            flex: 1;
+            padding: 20px 24px;
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 20px;
+        }
+
+        @media (max-width: 1080px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel-header {
+            font-size: 1.1rem;
+            font-weight: 800;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        /* Incoming Alert Banner */
+        .incoming-alert-banner {
+            background: linear-gradient(135deg, #7f1d1d 0%, #1e1b4b 100%);
+            border: 2px solid var(--accent-red);
+            border-radius: 12px;
+            padding: 18px 22px;
+            margin-bottom: 20px;
+            animation: alertGlow 2s infinite alternate;
+        }
+
+        @keyframes alertGlow {
+            from { box-shadow: 0 0 10px rgba(239, 68, 68, 0.3); }
+            to { box-shadow: 0 0 20px rgba(239, 68, 68, 0.7); }
+        }
+
+        .alert-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .priority-badge {
+            background: #ef4444;
+            color: white;
+            font-weight: 850;
+            font-size: 0.85rem;
+            padding: 4px 10px;
+            border-radius: 6px;
+            letter-spacing: 0.5px;
+        }
+
+        .alert-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            background: rgba(0, 0, 0, 0.25);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 14px;
+        }
+
+        .alert-metric-lbl {
+            font-size: 0.72rem;
+            color: #cbd5e1;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .alert-metric-val {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: white;
+        }
+
+        /* Action Buttons */
+        .action-btn-group {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr;
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        .btn-action {
+            border: none;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-accept {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+        }
+
+        .btn-accept:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+
+        .btn-received {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+        }
+
+        .btn-received:hover {
+            filter: brightness(1.1);
+            transform: translateY(-1px);
+        }
+
+        .btn-decline {
+            background: var(--card-sub);
+            color: #f87171;
+            border: 1px solid #ef444455;
+        }
+
+        .btn-decline:hover {
+            background: #7f1d1d33;
+        }
+
+        /* Telemetry Cards */
+        .telemetry-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .tele-card {
+            background: var(--card-sub);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .tele-val {
+            font-size: 1.4rem;
+            font-weight: 850;
+            margin: 2px 0;
+        }
+
+        .tele-lbl {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+
+        /* Resource Toggle Cards */
+        .resource-toggle-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .res-toggle-card {
+            background: var(--card-sub);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #4b5563;
+            transition: .3s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #10b981;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(20px);
+        }
+
+        /* History Table */
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            margin-top: 10px;
+        }
+
+        .history-table th {
+            text-align: left;
+            padding: 8px 10px;
+            background: var(--card-sub);
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .history-table td {
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        /* Map */
+        #hosp-map {
+            width: 100%;
+            height: 280px;
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title-group">
+            <span style="font-size: 1.8rem;">🏥</span>
+            <div>
+                <div class="header-title">VITAVIA | Hospital Emergency Control Room</div>
+                <div class="header-subtitle">Real-Time Trauma Center Receiver &amp; Bed Readiness Console</div>
+            </div>
+        </div>
+        <div class="header-badges">
+            <div id="hosp-sse-indicator" class="live-indicator">
+                <span class="live-dot"></span>
+                <span id="hosp-sse-text">LIVE STREAM ACTIVE</span>
+            </div>
+            <a href="/ambulance" class="nav-link-btn" target="_blank">
+                🚑 Ambulance Mission Control ↗
+            </a>
+        </div>
+    </header>
+
+    <!-- Hospital Switcher Strip -->
+    <div class="selector-strip">
+        <div class="selector-group">
+            <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Active Facility Console:</span>
+            <select id="hospital-select" class="form-select" onchange="onHospitalChange(this.value)">
+                <option value="HOSP-B">St. Jude Super Specialty Hospital (Level 1 Cardiac &amp; Trauma)</option>
+                <option value="HOSP-A">Metro City Central Hospital (Level 1 Downtown)</option>
+                <option value="HOSP-C">Apex Community Medical Center (Level 3 Urgent Care)</option>
+                <option value="HOSP-D">Lifeline Memorial Health (Level 2 Regional)</option>
+                <option value="HOSP-E">Grace Emergency &amp; Trauma Institute (Level 1 Tertiary)</option>
+            </select>
+        </div>
+        <div class="selector-group">
+            <div class="hospital-metric-pill">
+                <span>Trauma Bay:</span>
+                <strong id="hosp-beds-avail" style="color: #34d399;">8 Avail</strong>
+            </div>
+            <div class="hospital-metric-pill">
+                <span>ICU Capacity:</span>
+                <strong id="hosp-icu-avail" style="color: #38bdf8;">5 Avail</strong>
+            </div>
+            <div class="hospital-metric-pill">
+                <span>Ventilators:</span>
+                <strong id="hosp-vents-avail" style="color: #c084fc;">4 Avail</strong>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+
+        <!-- LEFT COLUMN: Live Incoming Mission Feed & Clinical Handshake -->
+        <div>
+            <!-- Live Incoming Alert Box (Dynamically shown / updated) -->
+            <div id="incoming-alert-container">
+                <div id="no-emergency-placeholder" class="panel" style="text-align: center; padding: 40px 20px;">
+                    <div style="font-size: 2.2rem; margin-bottom: 10px;">🛡️</div>
+                    <div style="font-size: 1.15rem; font-weight: 800; color: #94a3b8; margin-bottom: 6px;">
+                        NO ACTIVE INBOUND EMERGENCY
+                    </div>
+                    <div style="font-size: 0.85rem; color: #64748b; max-width: 480px; margin: 0 auto;">
+                        When an ambulance evaluates and dispatches to this hospital, the incoming patient telemetry, clinical AI assessment, and bay preparation prompt will appear here in real time.
+                    </div>
+                </div>
+
+                <div id="incoming-card" class="incoming-alert-banner" style="display: none;">
+                    <div class="alert-top">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 1.4rem;">🚨</span>
+                            <div>
+                                <div style="font-weight: 850; font-size: 1.15rem; color: white;">
+                                    INBOUND EMERGENCY DISPATCH ALERT
+                                </div>
+                                <div style="font-size: 0.8rem; color: #fed7aa;" id="alert-subtext">
+                                    En route from Trinity Junction Central
+                                </div>
+                            </div>
+                        </div>
+                        <span id="alert-priority-badge" class="priority-badge">P1 - CRITICAL</span>
+                    </div>
+
+                    <div class="alert-grid">
+                        <div>
+                            <div class="alert-metric-lbl">Ambulance ID</div>
+                            <div id="inbound-amb-id" class="alert-metric-val">AMB-07</div>
+                        </div>
+                        <div>
+                            <div class="alert-metric-lbl">Patient Profile</div>
+                            <div id="inbound-patient-name" class="alert-metric-val" style="font-size: 1.05rem;">Sarah Jenkins (58y)</div>
+                        </div>
+                        <div>
+                            <div class="alert-metric-lbl">Estimated ETA</div>
+                            <div id="inbound-eta" class="alert-metric-val" style="color: #38bdf8;">9.8 min</div>
+                        </div>
+                        <div>
+                            <div class="alert-metric-lbl">Distance</div>
+                            <div id="inbound-dist" class="alert-metric-val">5.1 km</div>
+                        </div>
+                    </div>
+
+                    <!-- Telemetry Sensors -->
+                    <div class="telemetry-row">
+                        <div class="tele-card">
+                            <div class="tele-lbl">SpO2</div>
+                            <div id="inbound-spo2" class="tele-val" style="color: #f87171;">87.5%</div>
+                        </div>
+                        <div class="tele-card">
+                            <div class="tele-lbl">Heart Rate</div>
+                            <div id="inbound-hr" class="tele-val">128 bpm</div>
+                        </div>
+                        <div class="tele-card">
+                            <div class="tele-lbl">Blood Pressure</div>
+                            <div id="inbound-bp" class="tele-val">92/58</div>
+                        </div>
+                        <div class="tele-card">
+                            <div class="tele-lbl">Temperature</div>
+                            <div id="inbound-temp" class="tele-val">38.4°C</div>
+                        </div>
+                    </div>
+
+                    <!-- Clinical Assessment -->
+                    <div style="background: rgba(0,0,0,0.3); border-radius: 8px; padding: 12px 14px; margin-bottom: 14px;">
+                        <div style="font-size: 0.8rem; font-weight: 800; color: #cbd5e1; text-transform: uppercase; margin-bottom: 4px;">
+                            Chief Complaint &amp; Clinical Summary:
+                        </div>
+                        <div id="inbound-complaint" style="font-size: 0.95rem; color: #f8fafc; font-weight: 500; margin-bottom: 6px;">
+                            Severe dyspnea, acute cyanosis, respiratory failure.
+                        </div>
+                        <div style="font-size: 0.78rem; color: #94a3b8;">
+                            <strong>Required Infrastructure:</strong> <span id="inbound-infra">ICU, Ventilator, Emergency Bed, Emergency Doctor</span>
+                        </div>
+                    </div>
+
+                    <!-- Assigned Bay & Status Details -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); padding: 8px 12px; border-radius: 6px;">
+                        <div>
+                            <span style="font-size: 0.75rem; color: #94a3b8;">Assigned Trauma Bay:</span>
+                            <strong id="inbound-bay" style="color: #6ee7b7; margin-left: 4px;">Trauma Bay #2</strong>
+                        </div>
+                        <div>
+                            <span style="font-size: 0.75rem; color: #94a3b8;">Team Readiness:</span>
+                            <strong id="inbound-team-status" style="color: #fde047; margin-left: 4px;">STANDBY</strong>
+                        </div>
+                        <div>
+                            <span style="font-size: 0.75rem; color: #94a3b8;">Handshake ID:</span>
+                            <span id="inbound-ack-id" style="color: #cbd5e1; font-family: monospace;">ACK-8F2B1A</span>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Staff Action Controls -->
+                    <div class="action-btn-group">
+                        <button id="btn-accept-prep" class="btn-action btn-accept" onclick="acknowledgeInbound()">
+                            ✅ ACCEPT &amp; CONFIRM READINESS
+                        </button>
+                        <button id="btn-patient-received" class="btn-action btn-received" onclick="confirmPatientReceived()">
+                            🏥 PATIENT RECEIVED
+                        </button>
+                        <button id="btn-decline" class="btn-action btn-decline" onclick="declineInbound()">
+                            ❌ DIVERT / CANNOT ACCEPT
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inbound Route Map & Transit Progress -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span>🛰️ Inbound Ambulance Geographic Radar</span>
+                    <span id="hosp-map-status" style="font-size: 0.78rem; color: var(--accent-cyan); font-weight: 700;">Radar Tracking Active</span>
+                </div>
+                <div id="hosp-map"></div>
+            </div>
+
+            <!-- Audit History Table -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span>📜 Persisted Emergency History Audit Log (H2 Database)</span>
+                    <button class="nav-link-btn" style="padding: 3px 8px; font-size: 0.75rem;" onclick="loadHistory()">
+                        🔄 Refresh History
+                    </button>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Emergency ID</th>
+                                <th>Ambulance</th>
+                                <th>Patient</th>
+                                <th>Triage</th>
+                                <th>Hospital</th>
+                                <th>Bay</th>
+                                <th>Status</th>
+                                <th>Started</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-tbody">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: Hospital Live Resource Controls -->
+        <div>
+            <div class="panel">
+                <div class="panel-header">
+                    <span>⚡ Live Capacity Controls</span>
+                    <span style="font-size: 0.75rem; color: #94a3b8;">Deterministic Grid Testing</span>
+                </div>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">
+                    Toggle resources here to demonstrate real-time eligibility rejection (e.g., turning off ICU marks this hospital ineligible for critical patients on the ambulance dashboard).
+                </p>
+
+                <div class="resource-toggle-grid">
+                    <div class="res-toggle-card">
+                        <div>
+                            <div style="font-size: 0.85rem; font-weight: 700;">ICU Bed</div>
+                            <div style="font-size: 0.72rem; color: #94a3b8;">Critical Care</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle-icu" checked onchange="updateHospitalResources()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="res-toggle-card">
+                        <div>
+                            <div style="font-size: 0.85rem; font-weight: 700;">Ventilator</div>
+                            <div style="font-size: 0.72rem; color: #94a3b8;">Resp. Support</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle-vent" checked onchange="updateHospitalResources()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="res-toggle-card">
+                        <div>
+                            <div style="font-size: 0.85rem; font-weight: 700;">Emergency Bay</div>
+                            <div style="font-size: 0.72rem; color: #94a3b8;">Acute Trauma</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle-bed" checked onchange="updateHospitalResources()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+
+                    <div class="res-toggle-card">
+                        <div>
+                            <div style="font-size: 0.85rem; font-weight: 700;">Trauma Team</div>
+                            <div style="font-size: 0.72rem; color: #94a3b8;">Emergency Doc</div>
+                        </div>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle-doc" checked onchange="updateHospitalResources()">
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <button class="nav-link-btn" style="width: 100%; justify-content: center; margin-top: 10px;" onclick="resetHospitalGrid()">
+                    🔄 Reset All Hospitals to Baseline
+                </button>
+            </div>
+
+            <!-- Assigned Bay Selection Dialog -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span>🛏️ Trauma Bay Assignment</span>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label style="font-size: 0.78rem; font-weight: 700; color: #94a3b8; text-transform: uppercase;">
+                        Prepared Trauma Bay:
+                    </label>
+                    <select id="assigned-bay-select" class="form-select" style="min-width: 100%; margin-top: 4px;">
+                        <option value="Emergency Trauma Bay #1">Emergency Trauma Bay #1 (Resuscitation)</option>
+                        <option value="Emergency Trauma Bay #2" selected>Emergency Trauma Bay #2 (Ventilator Equipped)</option>
+                        <option value="Emergency Trauma Bay #3">Emergency Trauma Bay #3 (Cardiac Bay)</option>
+                        <option value="Emergency Trauma Bay #4">Emergency Trauma Bay #4 (General Trauma)</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 0.78rem; font-weight: 700; color: #94a3b8; text-transform: uppercase;">
+                        Readiness Notes:
+                    </label>
+                    <input type="text" id="readiness-notes" class="form-select" style="min-width: 100%; margin-top: 4px;" value="Emergency physician and respiratory therapist standing by.">
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Leaflet GIS JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        let currentHospitalId = "HOSP-B";
+        let currentEmergencyId = null;
+        let hospMap, ambMarker, hospMarker, routeLine;
+
+        // Initialize Map
+        function initHospMap() {
+            hospMap = L.map('hosp-map').setView([13.0080, 77.6250], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(hospMap);
+
+            const hIcon = L.divIcon({
+                className: 'hosp-icon',
+                html: '<div style="font-size: 26px;">🏥</div>',
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+            hospMarker = L.marker([13.0080, 77.6250], { icon: hIcon }).addTo(hospMap)
+                .bindPopup("<b>St. Jude Super Specialty Hospital</b>");
+
+            const ambIcon = L.divIcon({
+                className: 'amb-icon',
+                html: '<div style="font-size: 26px;">🚑</div>',
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+            ambMarker = L.marker([12.9700, 77.6000], { icon: ambIcon }).addTo(hospMap)
+                .bindPopup("<b>Inbound Ambulance AMB-07</b>");
+        }
+
+        // Connect Server-Sent Events (SSE)
+        function initHospSSE() {
+            const sseText = document.getElementById("hosp-sse-text");
+            const eventSource = new EventSource("/api/v1/events/stream");
+
+            eventSource.addEventListener("open", () => {
+                sseText.innerText = "LIVE STREAM ACTIVE";
+            });
+
+            eventSource.addEventListener("EMERGENCY_DISPATCHED", (e) => {
+                const data = JSON.parse(e.data);
+                console.log("Hospital received dispatch alert:", data);
+                if (data.selectedHospitalId === currentHospitalId || isAlias(data.selectedHospitalId, currentHospitalId)) {
+                    currentEmergencyId = data.emergencyId;
+                    fetchLatestInbound();
+                }
+            });
+
+            eventSource.addEventListener("TELEMETRY_UPDATED", (e) => {
+                const data = JSON.parse(e.data);
+                handleTelemetry(data);
+            });
+
+            eventSource.addEventListener("HOSPITAL_ACKNOWLEDGED", (e) => {
+                const data = JSON.parse(e.data);
+                if (data.emergencyId === currentEmergencyId) {
+                    document.getElementById("inbound-team-status").innerText = "CONFIRMED & READY ✅";
+                    document.getElementById("inbound-team-status").style.color = "#34d399";
+                    document.getElementById("btn-accept-prep").innerText = "✅ READINESS CONFIRMED";
+                    document.getElementById("btn-accept-prep").style.background = "#059669";
+                }
+            });
+
+            eventSource.addEventListener("PATIENT_RECEIVED", (e) => {
+                const data = JSON.parse(e.data);
+                if (data.emergencyId === currentEmergencyId) {
+                    document.getElementById("inbound-team-status").innerText = "PATIENT RECEIVED / ADMITTED";
+                    document.getElementById("inbound-team-status").style.color = "#38bdf8";
+                    loadHistory();
+                }
+            });
+
+            eventSource.onerror = () => {
+                sseText.innerText = "RECONNECTING...";
+            };
+        }
+
+        function isAlias(id1, id2) {
+            const map = { "HOSP-A": "HOSP001", "HOSP-B": "HOSP002", "HOSP-C": "HOSP003", "HOSP-D": "HOSP004", "HOSP-E": "HOSP005" };
+            return map[id1] === id2 || map[id2] === id1 || id1 === id2;
+        }
+
+        function handleTelemetry(data) {
+            document.getElementById("inbound-spo2").innerText = data.vitals.spo2.toFixed(1) + "%";
+            document.getElementById("inbound-hr").innerText = data.vitals.heartRate + " bpm";
+            document.getElementById("inbound-bp").innerText = data.vitals.systolicBp + "/" + data.vitals.diastolicBp;
+            document.getElementById("inbound-temp").innerText = data.vitals.temperature.toFixed(1) + "°C";
+            document.getElementById("inbound-eta").innerText = data.remainingEtaMinutes.toFixed(1) + " min";
+            document.getElementById("alert-subtext").innerText = `In Transit: ${data.address} (${data.progressPercent}% progress)`;
+
+            if (ambMarker && data.latitude && data.longitude) {
+                ambMarker.setLatLng([data.latitude, data.longitude]);
+            }
+        }
+
+        async function fetchLatestInbound() {
+            try {
+                const res = await fetch(`/api/v1/emergency/incoming?hospital_id=${currentHospitalId}`);
+                const data = await res.json();
+                console.log("Inbound check:", data);
+
+                if (data.exists && data.has_active_request && data.incoming_request) {
+                    const req = data.incoming_request;
+                    currentEmergencyId = req.emergency_id || currentEmergencyId;
+
+                    document.getElementById("no-emergency-placeholder").style.display = "none";
+                    document.getElementById("incoming-card").style.display = "block";
+
+                    document.getElementById("inbound-amb-id").innerText = req.ambulance_id || "AMB-07";
+                    document.getElementById("inbound-patient-name").innerText = `${req.patient_name || 'Sarah Jenkins'} (${req.age || 58}y)`;
+                    document.getElementById("inbound-eta").innerText = (req.eta_minutes ? req.eta_minutes.toFixed(1) : "9.8") + " min";
+                    document.getElementById("inbound-dist").innerText = (req.distance_km ? req.distance_km.toFixed(1) : "5.1") + " km";
+                    document.getElementById("inbound-complaint").innerText = req.chief_complaint || "Severe respiratory distress";
+                    document.getElementById("inbound-bay").innerText = req.assigned_bay || "Trauma Bay #1";
+                    document.getElementById("inbound-ack-id").innerText = req.acknowledgment_id || "ACK-PENDING";
+
+                    const triage = req.triage_level || "CRITICAL";
+                    document.getElementById("alert-priority-badge").innerText = req.priority_code ? `${req.priority_code} - ${triage}` : triage;
+
+                    // Update Map
+                    const ambOrigin = [12.9700, 77.6000];
+                    const hospCoord = [hospMarker.getLatLng().lat, hospMarker.getLatLng().lng];
+                    if (routeLine) hospMap.removeLayer(routeLine);
+                    routeLine = L.polyline([ambOrigin, hospCoord], { color: '#ef4444', weight: 4, dashArray: '6, 6' }).addTo(hospMap);
+                    hospMap.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
+                } else {
+                    document.getElementById("no-emergency-placeholder").style.display = "block";
+                    document.getElementById("incoming-card").style.display = "none";
+                }
+            } catch (e) {
+                console.error("Error fetching incoming emergency", e);
+            }
+        }
+
+        // Action: Accept & Confirm Readiness
+        async function acknowledgeInbound() {
+            if (!currentEmergencyId) {
+                const snapshot = await (await fetch("/api/v1/simulation/snapshot")).json();
+                currentEmergencyId = snapshot.emergency_id || "EMERG-DEMO";
+            }
+
+            const bay = document.getElementById("assigned-bay-select").value;
+            const notes = document.getElementById("readiness-notes").value;
+
+            try {
+                const res = await fetch(`/api/v1/emergencies/${currentEmergencyId}/acknowledge`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        hospital_id: currentHospitalId,
+                        assigned_bay: bay,
+                        team_ready: true,
+                        notes: notes
+                    })
+                });
+
+                if (res.ok) {
+                    document.getElementById("inbound-bay").innerText = bay;
+                    document.getElementById("inbound-team-status").innerText = "CONFIRMED & READY ✅";
+                    document.getElementById("inbound-team-status").style.color = "#34d399";
+                    document.getElementById("btn-accept-prep").innerText = "✅ READINESS CONFIRMED";
+                    document.getElementById("btn-accept-prep").style.background = "#059669";
+                    loadHistory();
+                } else {
+                    alert("Acknowledge failed with status: " + res.status);
+                }
+            } catch (e) {
+                alert("Error acknowledging: " + e.message);
+            }
+        }
+
+        // Action: Confirm Patient Received
+        async function confirmPatientReceived() {
+            if (!currentEmergencyId) {
+                alert("No active emergency to receive.");
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/v1/emergencies/${currentEmergencyId}/complete?hospital_id=${currentHospitalId}`, {
+                    method: "POST"
+                });
+
+                if (res.ok) {
+                    alert("Patient safely received! Admission status logged in H2 relational database.");
+                    document.getElementById("inbound-team-status").innerText = "PATIENT RECEIVED / COMPLETED";
+                    document.getElementById("inbound-team-status").style.color = "#38bdf8";
+                    loadHistory();
+                }
+            } catch (e) {
+                alert("Error confirming arrival: " + e.message);
+            }
+        }
+
+        // Action: Decline & Divert
+        async function declineInbound() {
+            if (!currentEmergencyId) {
+                alert("No active inbound emergency to decline.");
+                return;
+            }
+            if (confirm("Confirm diverting inbound ambulance to the next available emergency center?")) {
+                try {
+                    const res = await fetch(`/api/v1/emergencies/${currentEmergencyId}/reject?hospital_id=${currentHospitalId}&reason=Emergency+Capacity+Saturated`, {
+                        method: "POST"
+                    });
+                    const data = await res.json();
+                    alert("Ambulance successfully diverted and rerouted to: " + (data.newHospitalName || "Secondary Hospital"));
+                    document.getElementById("incoming-card").style.display = "none";
+                    document.getElementById("no-emergency-placeholder").style.display = "block";
+                    currentEmergencyId = null;
+                    loadHistory();
+                } catch (e) {
+                    alert("Divert action failed: " + e.message);
+                }
+            }
+        }
+
+        // Switch Hospital
+        function onHospitalChange(hId) {
+            currentHospitalId = hId;
+            fetchHospitalCapacity(hId);
+            fetchLatestInbound();
+        }
+
+        async function fetchHospitalCapacity(hId) {
+            try {
+                const res = await fetch(`/api/v1/hospitals/${hId}`);
+                if (res.ok) {
+                    const h = await res.json();
+                    document.getElementById("hosp-beds-avail").innerText = h.infrastructure.available_emergency_beds + " Avail";
+                    document.getElementById("hosp-icu-avail").innerText = h.infrastructure.available_icu_beds + " Avail";
+                    document.getElementById("hosp-vents-avail").innerText = h.infrastructure.available_ventilators + " Avail";
+
+                    document.getElementById("toggle-icu").checked = h.infrastructure.icu_available;
+                    document.getElementById("toggle-vent").checked = h.infrastructure.ventilator_available;
+                    document.getElementById("toggle-bed").checked = h.infrastructure.emergency_bed_available;
+                    document.getElementById("toggle-doc").checked = h.infrastructure.emergency_doctor_available;
+
+                    if (hospMarker && h.location) {
+                        hospMarker.setLatLng([h.location.latitude, h.location.longitude]);
+                        hospMarker.bindPopup(`<b>${h.name}</b><br>${h.trauma_level}`).openPopup();
+                        hospMap.setView([h.location.latitude, h.location.longitude], 13);
+                    }
+                }
+            } catch (e) {
+                console.error("Error fetching hospital capacity", e);
+            }
+        }
+
+        async function updateHospitalResources() {
+            const body = {
+                icu_available: document.getElementById("toggle-icu").checked,
+                ventilator_available: document.getElementById("toggle-vent").checked,
+                emergency_bed_available: document.getElementById("toggle-bed").checked,
+                emergency_doctor_available: document.getElementById("toggle-doc").checked
+            };
+
+            await fetch(`/api/v1/hospitals/${currentHospitalId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body)
+            });
+            fetchHospitalCapacity(currentHospitalId);
+        }
+
+        async function resetHospitalGrid() {
+            await fetch("/api/v1/hospitals/reset", { method: "POST" });
+            fetchHospitalCapacity(currentHospitalId);
+        }
+
+        async function loadHistory() {
+            try {
+                const res = await fetch("/api/v1/history/emergencies?limit=10");
+                const list = await res.json();
+                const tbody = document.getElementById("history-tbody");
+                if (list.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#64748b;">No emergency records in database yet.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = list.map(item => `
+                    <tr>
+                        <td><strong>${item.emergencyId || '—'}</strong></td>
+                        <td>${item.ambulanceId || 'AMB-07'}</td>
+                        <td>${item.patientName || 'Emergency Patient'} (${item.patientAge || '—'})</td>
+                        <td><span style="color: #ef4444; font-weight:700;">${item.triageSeverity || 'HIGH'}</span></td>
+                        <td>${item.selectedHospitalName || item.selectedHospitalId || '—'}</td>
+                        <td>${item.assignedBay || '—'}</td>
+                        <td><strong style="color: ${item.status === 'COMPLETED' ? '#38bdf8' : (item.status === 'ACKNOWLEDGED' ? '#34d399' : '#f59e0b')}">${item.status || 'DISPATCHED'}</strong></td>
+                        <td style="font-size:0.75rem; color:#9ca3af;">${item.startedAt ? item.startedAt.substring(11, 19) + ' UTC' : '—'}</td>
+                    </tr>
+                `).join("");
+            } catch (e) {
+                console.error("Error loading history", e);
+            }
+        }
+
+        window.addEventListener("DOMContentLoaded", () => {
+            initHospMap();
+            initHospSSE();
+            fetchHospitalCapacity(currentHospitalId);
+            fetchLatestInbound();
+            loadHistory();
+
+            // Interval backup poll every 3 seconds
+            setInterval(() => {
+                fetchLatestInbound();
+            }, 3000);
+        });
+    </script>
+</body>
+</html>

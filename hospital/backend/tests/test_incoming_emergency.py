@@ -35,7 +35,8 @@ def test_post_incoming_emergency_accepts_and_stores_latest_request() -> None:
     payload = response.json()
     assert payload["exists"] is True
     assert payload["has_active_request"] is True
-    assert payload["incoming_request"] == INCOMING_REQUEST
+    for key, value in INCOMING_REQUEST.items():
+        assert payload["incoming_request"][key] == value
     assert payload["received_at"] is not None
 
 

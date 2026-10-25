@@ -225,7 +225,7 @@ class EmergencyDecisionResponse(BaseModel):
 
 
 class IncomingEmergencyRequest(BaseModel):
-    """Latest ambulance-to-hospital request payload; it does not trigger clinical logic."""
+    """Complete ambulance-to-hospital emergency notification payload."""
 
     ambulance_id: str = Field(min_length=1)
     patient_id: str = Field(min_length=1)
@@ -239,10 +239,25 @@ class IncomingEmergencyRequest(BaseModel):
     diastolic_bp: int = Field(ge=40, le=120)
     temperature: float = Field(ge=34.0, le=42.0)
     dispatch_origin: str = Field(min_length=1)
+    ambulance_latitude: Optional[float] = None
+    ambulance_longitude: Optional[float] = None
     selected_hospital_id: str = Field(min_length=1)
+    selected_hospital_name: Optional[str] = None
     eta_minutes: float = Field(ge=0)
     distance_km: float = Field(ge=0)
     triage_level: str = Field(min_length=1)
+    triage_summary: Optional[str] = None
+    required_infrastructure: list[str] = Field(default_factory=list)
+    priority_code: Optional[str] = None
+    acknowledgment_id: Optional[str] = None
+    acknowledgment_status: Optional[str] = None
+    assigned_bay: Optional[str] = None
+    team_ready: Optional[bool] = None
+    # Kept optional so older test/demo payloads remain valid.
+    blood_group: Optional[str] = None
+    medical_history: Optional[str] = None
+    allergies: Optional[str] = None
+    emergency_contact: Optional[str] = None
 
 
 class IncomingEmergencyResponse(BaseModel):

@@ -341,12 +341,26 @@ def _render_communicated_incoming_request(
                     f"{request.get('gender', '—')}\n\n"
                     f"**Chief Complaint**  \n{request.get('chief_complaint', '—')}"
                 )
+                extra = st.columns(2)
+                extra[0].markdown(
+                    f"**Blood Group**  \n{request.get('blood_group') or '—'}\n\n"
+                    f"**Medical History**  \n{request.get('medical_history') or '—'}"
+                )
+                extra[1].markdown(
+                    f"**Allergies**  \n{request.get('allergies') or '—'}\n\n"
+                    f"**Emergency Contact**  \n{request.get('emergency_contact') or '—'}"
+                )
         with transport_column:
             with st.container(border=True):
                 st.markdown("##### EMERGENCY / TRANSPORT")
                 st.metric("Ambulance ID", request.get("ambulance_id", "—"))
                 st.metric("Triage / Urgency", triage_level)
                 st.caption(f"Dispatch origin: {request.get('dispatch_origin', '—')}")
+                st.caption(
+                    f"Ambulance GPS: {request.get('ambulance_latitude', '—')}, "
+                    f"{request.get('ambulance_longitude', '—')}"
+                )
+                st.caption(f"Destination: {request.get('selected_hospital_name') or hospital_name}")
                 eta_column, distance_column = st.columns(2)
                 eta_column.metric("ETA", _format_eta(request.get("eta_minutes")))
                 distance_column.metric(
@@ -372,6 +386,27 @@ def _render_communicated_incoming_request(
                 "Values received from the ambulance application. "
                 "No clinical analysis is run by this view."
             )
+
+        with st.container(border=True):
+            st.markdown("##### TRIAGE & READINESS")
+            triage_cols = st.columns(4)
+            triage_cols[0].metric("Priority", request.get("priority_code") or "—")
+            triage_cols[1].metric("AI Triage", triage_level)
+            triage_cols[2].metric("Trauma Bay", request.get("assigned_bay") or "—")
+            triage_cols[3].metric(
+                "Team",
+                "READY" if request.get("team_ready") else "STANDBY",
+            )
+            if request.get("triage_summary"):
+                st.write(f"**AI summary:** {request['triage_summary']}")
+            resources = request.get("required_infrastructure") or []
+            if resources:
+                st.write("**Required resources:** " + ", ".join(resources))
+            if request.get("acknowledgment_id"):
+                st.caption(
+                    f"Handshake: {request['acknowledgment_id']} · "
+                    f"{request.get('acknowledgment_status') or 'RECEIVED'}"
+                )
 
 
 def _render_incoming_urgency_banner(triage_level: str) -> None:
