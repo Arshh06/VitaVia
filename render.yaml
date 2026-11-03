@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: vitavia-emergency-platform
+    runtime: docker
+    plan: free
+    region: oregon
+    branch: main
+    dockerfilePath: Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false
+      - key: SPRING_DATASOURCE_URL
+        value: jdbc:h2:file:./data/vitaviadb;AUTO_SERVER=TRUE;DB_CLOSE_DELAY=-1
